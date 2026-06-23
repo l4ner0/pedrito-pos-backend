@@ -2,12 +2,13 @@ package com.pedritopos.auth.services;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.pedritopos.auth.domain.Role;
+
 import com.pedritopos.auth.domain.User;
 import com.pedritopos.auth.dto.request.LoginRequest;
 import com.pedritopos.auth.dto.request.RegisterRequest;
 import com.pedritopos.auth.dto.response.LoginResponse;
 import com.pedritopos.auth.dto.response.RegisterResponse;
+import com.pedritopos.auth.enums.Role;
 import com.pedritopos.auth.repositories.UserRepository;
 import com.pedritopos.shared.security.JwtService;
 

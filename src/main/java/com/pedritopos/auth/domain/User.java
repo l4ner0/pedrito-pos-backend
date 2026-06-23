@@ -2,6 +2,7 @@ package com.pedritopos.auth.domain;
 
 import java.util.UUID;
 
+import com.pedritopos.auth.enums.Role;
 import com.pedritopos.shared.domain.BaseEntity;
 
 import jakarta.persistence.Column;
