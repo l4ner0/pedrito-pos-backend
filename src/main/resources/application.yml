@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: pedritopos-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pedritopos
+    username: pedritopos
+    password: pedritopos123
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
