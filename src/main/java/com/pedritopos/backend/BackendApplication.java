@@ -1,13 +1,5 @@
 package com.pedritopos.backend;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@SpringBootApplication
-public class BackendApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(BackendApplication.class, args);
-	}
-
+// Reemplazado por com.pedritopos.PedritoPosApplication — este archivo puede eliminarse.
+class BackendApplication {
 }
