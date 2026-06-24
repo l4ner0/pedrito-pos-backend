@@ -27,7 +27,7 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
 
         if (!user.isActive()) {
@@ -42,18 +42,20 @@ public class AuthService {
 
         RefreshToken refreshToken = refreshTokenService.create(user);
 
-        return new LoginResponse(accessToken, refreshToken.getToken(), user.getFullName(), user.getRole().name());
+        return new LoginResponse(user.getUsername(), accessToken, refreshToken.getToken(), user.getFullName(),
+                user.getRole().name());
     }
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("El email ya está registrado");
+        if (userRepository.existsByUsername(request.username())) {
+            throw new RuntimeException("El usuario ya está registrado");
         }
 
         User user = new User();
         user.setBusinessId(request.businessId());
         user.setFullName(request.fullName());
+        user.setUsername(request.username());
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setRole(Role.valueOf(request.role().toUpperCase()));
@@ -62,6 +64,7 @@ public class AuthService {
 
         return new RegisterResponse(
                 user.getId(),
+                user.getUsername(),
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole().name());
@@ -75,7 +78,8 @@ public class AuthService {
 
         RefreshToken newRefreshToken = refreshTokenService.create(user);
 
-        return new LoginResponse(newAccessToken, newRefreshToken.getToken(), user.getFullName(), user.getRole().name());
+        return new LoginResponse(user.getUsername(), newAccessToken, newRefreshToken.getToken(), user.getFullName(),
+                user.getRole().name());
     }
 
     public void logout(String refreshToken) {

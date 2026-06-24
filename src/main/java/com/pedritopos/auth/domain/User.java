@@ -23,6 +23,9 @@ public class User extends BaseEntity {
     @Column(name = "business_id", nullable = false)
     private UUID businessId;
 
+    @Column(nullable = false, unique = true, length = 50)
+    private String username;
+
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
