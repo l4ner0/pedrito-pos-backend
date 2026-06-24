@@ -66,8 +66,8 @@ com.pedritopos
         └── response/  ← outbound records
 ```
 
-Implemented modules: `auth` (login, register, refresh, logout), `category` (CRUD with soft delete).  
-Pending: `catalog`, `sales`, `analytics`, `settings` (folder stubs already created).
+Implemented modules: `auth` (login, register, refresh, logout), `category` (CRUD), `product` (CRUD + search).  
+Pending: `sales`, `analytics`, `settings`.
 
 ### Multi-tenancy
 
@@ -95,7 +95,7 @@ Properties must be top-level in `application.yml` (not nested under `spring:`):
 ```yaml
 jwt:
   secret: "<min-32-char secret>"
-  expiration-ms: 900000         # 15 minutes (access token)
+  expiration-ms: 900000            # 15 minutes (access token)
   refresh-expiration-ms: 86400000  # 24 hours (refresh token)
 ```
 
@@ -111,16 +111,49 @@ jwt:
 | `MethodArgumentNotValidException` | 422 Unprocessable Entity |
 | `Exception` (catch-all) | 500 Internal Server Error |
 
-Throw `RuntimeException` with a Spanish message for business rule violations (e.g. "Credenciales inválidas", "Ya existe una categoría con ese nombre"). The response body is `ApiError { status, message }`.
+Throw `RuntimeException` with a Spanish message for business rule violations. The response body is `ApiError { status, message, timestamp }`.
 
 ### Soft delete
 
-Entities with an `active` boolean column use soft delete: set `active = false` rather than deleting. Repositories filter by `active = true` in queries (see `CategoryRepository.findActiveByBusiness`).
+Entities with an `active` boolean use soft delete: set `active = false` rather than deleting. Repositories always filter by `active = true`. The `findActive` helper in services also checks this before update/delete operations.
+
+### PUT vs PATCH
+
+Modules that support partial updates use two separate request DTOs:
+
+- `XRequest` — for `POST`, all required fields carry `@NotNull` / `@NotBlank`.
+- `XPatchRequest` — for `PATCH`, all fields are nullable (no `@NotNull`/`@NotBlank`). Bean Validation annotations like `@DecimalMin` and `@Min` are kept because they skip `null` values automatically.
+
+In the service `patch` method, each field is applied only when non-null. Exception: sending `sku` as `""` explicitly clears it (sets to `null` in DB), while sending `null` leaves it unchanged.
+
+### Splitting services for specialized queries
+
+When a query has different performance characteristics from the main CRUD, extract it into a dedicated `XQueryService`. See `product`:
+
+- `ProductService` — CRUD operations.
+- `ProductQueryService` — `findByCategory(businessId, categoryId)`: uses a JPQL query that benefits from the existing `idx_products_business` partial index; no JOIN needed.
+
+The controller injects both services independently.
+
+### Repository query conventions
+
+- **JPQL** for queries that can use entity field names and JPA-managed types (UUID comparisons, exact matches).
+- **Native query** (`nativeQuery = true`) only when using PostgreSQL-specific features unavailable in JPQL, such as `ILIKE` for case-insensitive fuzzy search.
+- Optional filter params in native queries use `(:param IS NULL OR col ILIKE '%' || :param || '%')` so a `null` param skips the condition entirely — pass `null` (not empty string) from the service to activate this.
+
+### Controller route ordering
+
+Declare specific path segments before path variables in the same controller to avoid Spring mapping a literal string as a UUID:
+
+```java
+@GetMapping("/by-category/{categoryId}")   // must come before /{id}
+@GetMapping("/{id}")
+```
 
 ### Key domain facts (from V1 migration)
 
 - Roles: `ADMIN`, `CAJERO`
 - Payment methods: `Efectivo`, `Tarjeta`, `Yape`
-- Products have `version` (optimistic locking), `low_stock_threshold`, and a partial index on `active = true`
-- `sale_items` stores a snapshot of `product_name` and `unit_price` at the time of sale (denormalised intentionally)
-- All timestamps are `TIMESTAMPTZ` stored as `Instant` in Java
+- Products: `version` column maps to `@Version` (optimistic locking), `low_stock_threshold` default 8, partial index `WHERE active = true`. The response DTO includes a computed `lowStock` boolean (`stock < lowStockThreshold`).
+- `sale_items` stores a snapshot of `product_name` and `unit_price` at the time of sale (denormalised intentionally).
+- All timestamps are `TIMESTAMPTZ` stored as `Instant` in Java.
