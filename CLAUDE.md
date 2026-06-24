@@ -37,18 +37,24 @@ Schema is managed exclusively by **Flyway** (`ddl-auto: validate`). Migration fi
 
 The VS Code launch config reads from a `.env` file at the project root for local overrides.
 
+**Flyway checksum mismatch in development** — if a migration file is modified after being applied, fix it by removing the record and re-running:
+
+```bash
+docker exec pedritopos-db psql -U pedritopos -d pedritopos \
+  -c "DELETE FROM flyway_schema_history WHERE version = '<N>'; DROP TABLE IF EXISTS <table> CASCADE;"
+```
+
 ## Architecture
 
 ### Module structure
 
-The codebase is organised into feature modules, each with the same internal layout:
-
 ```
 com.pedritopos
-├── backend/BackendApplication.java   ← entry point (legacy package, keep as-is)
+├── PedritoPosApplication.java        ← entry point
 ├── shared/
 │   ├── config/SecurityConfig.java    ← Spring Security + JWT filter wiring
 │   ├── domain/BaseEntity.java        ← UUID PK + createdAt (@MappedSuperclass)
+│   ├── exception/                    ← GlobalExceptionHandler, ApiError
 │   └── security/                     ← JwtService, JwtAuthFilter
 └── {module}/
     ├── controllers/   ← @RestController, mapped to /v1/{module}/
@@ -60,30 +66,56 @@ com.pedritopos
         └── response/  ← outbound records
 ```
 
-Currently implemented: `auth` (login, register).
+Implemented modules: `auth` (login, register, refresh, logout), `category` (CRUD with soft delete).  
 Pending: `catalog`, `sales`, `analytics`, `settings` (folder stubs already created).
 
 ### Multi-tenancy
 
-Every entity and every query must be scoped by `business_id`. The JWT payload carries `userId`, `businessId`, and `role` — extract `businessId` from the security context (via `JwtAuthFilter`, which stores the `userId` as principal) when needed in services.
+Every entity and every query must be scoped by `business_id`. The JWT payload carries `userId`, `businessId`, and `role`. In controllers, extract `businessId` from the `Authentication` details:
+
+```java
+private UUID getBusinessId(Authentication authentication) {
+    Claims claims = (Claims) authentication.getDetails();
+    return UUID.fromString(claims.get("businessId", String.class));
+}
+```
+
+`JwtAuthFilter` stores the full `Claims` object in `authentication.getDetails()` and the `userId` string as the principal.
 
 ### Security
 
-`SecurityConfig` configures stateless JWT auth. Public endpoints: `POST /v1/auth/login` and `POST /v1/auth/register`. All other routes require a valid Bearer token.
+`SecurityConfig` configures stateless JWT auth. Public endpoints: `POST /v1/auth/login`, `POST /v1/auth/register`, `POST /v1/auth/refresh`, `POST /v1/auth/logout`. All other routes require a valid Bearer token.
 
-`JwtAuthFilter` validates the token and sets a `UsernamePasswordAuthenticationToken` with authorities in the format `ROLE_{role}` (e.g. `ROLE_ADMIN`, `ROLE_CAJERO`).
-
-Use `@PreAuthorize("hasRole('ADMIN')")` on controller methods that need role enforcement.
+`JwtAuthFilter` sets authorities in the format `ROLE_{role}` (e.g. `ROLE_ADMIN`, `ROLE_CAJERO`). Use `@PreAuthorize("hasRole('ADMIN')")` on controller methods that need role enforcement.
 
 ### JWT configuration
 
-Properties read by `JwtService` must be top-level in `application.yml` (not nested under `spring:`):
+Properties must be top-level in `application.yml` (not nested under `spring:`):
 
 ```yaml
 jwt:
   secret: "<min-32-char secret>"
-  expiration-ms: 28800000   # 8 hours
+  expiration-ms: 900000         # 15 minutes (access token)
+  refresh-expiration-ms: 86400000  # 24 hours (refresh token)
 ```
+
+**Token rotation:** `RefreshTokenService.create()` revokes all existing tokens for the user before issuing a new one. Every login and every refresh call rotates the refresh token.
+
+### Error handling
+
+`GlobalExceptionHandler` maps exceptions to HTTP status codes:
+
+| Exception | Status |
+|---|---|
+| `RuntimeException` | 400 Bad Request |
+| `MethodArgumentNotValidException` | 422 Unprocessable Entity |
+| `Exception` (catch-all) | 500 Internal Server Error |
+
+Throw `RuntimeException` with a Spanish message for business rule violations (e.g. "Credenciales inválidas", "Ya existe una categoría con ese nombre"). The response body is `ApiError { status, message }`.
+
+### Soft delete
+
+Entities with an `active` boolean column use soft delete: set `active = false` rather than deleting. Repositories filter by `active = true` in queries (see `CategoryRepository.findActiveByBusiness`).
 
 ### Key domain facts (from V1 migration)
 
