@@ -2,7 +2,9 @@ package com.pedritopos.auth.services;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.pedritopos.auth.domain.RefreshToken;
 import com.pedritopos.auth.domain.User;
 import com.pedritopos.auth.dto.request.LoginRequest;
 import com.pedritopos.auth.dto.request.RegisterRequest;
@@ -21,7 +23,9 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
+    @Transactional
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
@@ -34,11 +38,14 @@ public class AuthService {
             throw new RuntimeException("Credenciales inválidas");
         }
 
-        String token = jwtService.generateToken(user.getId(), user.getBusinessId(), user.getRole().name());
+        String accessToken = jwtService.generateToken(user.getId(), user.getBusinessId(), user.getRole().name());
 
-        return new LoginResponse(token, user.getFullName(), user.getRole().name());
+        RefreshToken refreshToken = refreshTokenService.create(user);
+
+        return new LoginResponse(accessToken, refreshToken.getToken(), user.getFullName(), user.getRole().name());
     }
 
+    @Transactional
     public RegisterResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new RuntimeException("El email ya está registrado");
@@ -58,6 +65,22 @@ public class AuthService {
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole().name());
+    }
+
+    public LoginResponse refresh(String refreshToken) {
+        RefreshToken token = refreshTokenService.validate(refreshToken);
+        User user = token.getUser();
+
+        String newAccessToken = jwtService.generateToken(user.getId(), user.getBusinessId(), user.getRole().name());
+
+        RefreshToken newRefreshToken = refreshTokenService.create(user);
+
+        return new LoginResponse(newAccessToken, newRefreshToken.getToken(), user.getFullName(), user.getRole().name());
+    }
+
+    public void logout(String refreshToken) {
+        RefreshToken token = refreshTokenService.validate(refreshToken);
+        refreshTokenService.revokeAll(token.getUser().getId());
     }
 
 }
