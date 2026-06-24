@@ -12,14 +12,23 @@ import com.pedritopos.product.domain.Product;
 
 public interface ProductRepository extends JpaRepository<Product, UUID> {
 
-    @Query("SELECT p FROM Product p WHERE p.businessId = :businessId AND p.active = true ORDER BY p.name")
-    List<Product> findActiveByBusiness(@Param("businessId") UUID businessId);
+    @Query(value = """
+            SELECT p.* FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.business_id = :businessId
+              AND p.active = true
+              AND (:name IS NULL OR p.name ILIKE '%' || :name || '%')
+              AND (:categoryName IS NULL OR c.name ILIKE '%' || :categoryName || '%')
+            ORDER BY p.name
+            """, nativeQuery = true)
+    List<Product> search(@Param("businessId") UUID businessId,
+            @Param("name") String name,
+            @Param("categoryName") String categoryName);
+
+    @Query("SELECT p FROM Product p WHERE p.businessId = :businessId AND p.categoryId = :categoryId AND p.active = true ORDER BY p.name")
+    List<Product> findActiveByCategory(@Param("businessId") UUID businessId, @Param("categoryId") UUID categoryId);
 
     Optional<Product> findByIdAndBusinessId(UUID id, UUID businessId);
-
-    @Query(value = "SELECT * FROM products WHERE business_id = :businessId AND active = true AND name ILIKE '%' || :name || '%' ORDER BY name",
-            nativeQuery = true)
-    List<Product> searchByName(@Param("businessId") UUID businessId, @Param("name") String name);
 
     @Query("SELECT COUNT(p) > 0 FROM Product p WHERE p.businessId = :businessId AND p.sku = :sku AND p.active = true")
     boolean existsActiveBySku(@Param("businessId") UUID businessId, @Param("sku") String sku);

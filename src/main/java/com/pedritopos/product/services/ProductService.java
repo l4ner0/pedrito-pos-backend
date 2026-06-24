@@ -32,11 +32,12 @@ public class ProductService {
         return toResponse(product);
     }
 
-    public List<ProductResponse> findAll(UUID businessId, String name) {
-        List<Product> products = (name != null && !name.isBlank())
-                ? productRepository.searchByName(businessId, name.trim())
-                : productRepository.findActiveByBusiness(businessId);
-        return products.stream().map(this::toResponse).toList();
+    public List<ProductResponse> findAll(UUID businessId, String name, String categoryName) {
+        return productRepository.search(
+                businessId,
+                blankToNull(name),
+                blankToNull(categoryName))
+                .stream().map(this::toResponse).toList();
     }
 
     public ProductResponse findById(UUID businessId, UUID id) {
@@ -86,6 +87,10 @@ public class ProductService {
 
     private boolean hasSku(String sku) {
         return sku != null && !sku.isBlank();
+    }
+
+    private String blankToNull(String value) {
+        return (value != null && !value.isBlank()) ? value.trim() : null;
     }
 
     private ProductResponse toResponse(Product product) {

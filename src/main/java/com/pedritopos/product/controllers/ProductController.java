@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pedritopos.product.dto.request.ProductPatchRequest;
 import com.pedritopos.product.dto.request.ProductRequest;
 import com.pedritopos.product.dto.response.ProductResponse;
+import com.pedritopos.product.services.ProductQueryService;
 import com.pedritopos.product.services.ProductService;
 
 import io.jsonwebtoken.Claims;
@@ -31,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
+    private final ProductQueryService productQueryService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -42,8 +44,15 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<List<ProductResponse>> findAll(Authentication authentication,
-            @RequestParam(required = false) String name) {
-        return ResponseEntity.ok(productService.findAll(getBusinessId(authentication), name));
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String categoryName) {
+        return ResponseEntity.ok(productService.findAll(getBusinessId(authentication), name, categoryName));
+    }
+
+    @GetMapping("/by-category/{categoryId}")
+    public ResponseEntity<List<ProductResponse>> findByCategory(Authentication authentication,
+            @PathVariable UUID categoryId) {
+        return ResponseEntity.ok(productQueryService.findByCategory(getBusinessId(authentication), categoryId));
     }
 
     @GetMapping("/{id}")
