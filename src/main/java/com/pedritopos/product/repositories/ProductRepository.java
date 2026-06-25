@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,8 +22,31 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
               AND (:name IS NULL OR p.name ILIKE '%' || :name || '%')
               AND (:categoryName IS NULL OR c.name ILIKE '%' || :categoryName || '%')
             ORDER BY p.name
+            """,
+            countQuery = """
+            SELECT COUNT(p.id) FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.business_id = :businessId
+              AND p.active = true
+              AND (:name IS NULL OR p.name ILIKE '%' || :name || '%')
+              AND (:categoryName IS NULL OR c.name ILIKE '%' || :categoryName || '%')
+            """,
+            nativeQuery = true)
+    Page<Product> search(@Param("businessId") UUID businessId,
+            @Param("name") String name,
+            @Param("categoryName") String categoryName,
+            Pageable pageable);
+
+    @Query(value = """
+            SELECT p.* FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.business_id = :businessId
+              AND p.active = true
+              AND (:name IS NULL OR p.name ILIKE '%' || :name || '%')
+              AND (:categoryName IS NULL OR c.name ILIKE '%' || :categoryName || '%')
+            ORDER BY p.name
             """, nativeQuery = true)
-    List<Product> search(@Param("businessId") UUID businessId,
+    List<Product> searchAll(@Param("businessId") UUID businessId,
             @Param("name") String name,
             @Param("categoryName") String categoryName);
 

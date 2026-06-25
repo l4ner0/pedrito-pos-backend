@@ -22,6 +22,7 @@ import com.pedritopos.product.dto.request.ProductRequest;
 import com.pedritopos.product.dto.response.ProductResponse;
 import com.pedritopos.product.services.ProductQueryService;
 import com.pedritopos.product.services.ProductService;
+import com.pedritopos.shared.dto.PagedResponse;
 
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
@@ -43,10 +44,12 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductResponse>> findAll(Authentication authentication,
+    public ResponseEntity<PagedResponse<ProductResponse>> findAll(Authentication authentication,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) String categoryName) {
-        return ResponseEntity.ok(productService.findAll(getBusinessId(authentication), name, categoryName));
+            @RequestParam(required = false) String categoryName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(productService.findAll(getBusinessId(authentication), name, categoryName, page, size));
     }
 
     @GetMapping("/by-category/{categoryId}")

@@ -1,8 +1,9 @@
 package com.pedritopos.product.services;
 
-import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +12,7 @@ import com.pedritopos.product.dto.request.ProductPatchRequest;
 import com.pedritopos.product.dto.request.ProductRequest;
 import com.pedritopos.product.dto.response.ProductResponse;
 import com.pedritopos.product.repositories.ProductRepository;
+import com.pedritopos.shared.dto.PagedResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,12 +34,11 @@ public class ProductService {
         return toResponse(product);
     }
 
-    public List<ProductResponse> findAll(UUID businessId, String name, String categoryName) {
-        return productRepository.search(
-                businessId,
-                blankToNull(name),
-                blankToNull(categoryName))
-                .stream().map(this::toResponse).toList();
+    public PagedResponse<ProductResponse> findAll(UUID businessId, String name, String categoryName, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return PagedResponse.from(
+                productRepository.search(businessId, blankToNull(name), blankToNull(categoryName), pageable)
+                        .map(this::toResponse));
     }
 
     public ProductResponse findById(UUID businessId, UUID id) {
