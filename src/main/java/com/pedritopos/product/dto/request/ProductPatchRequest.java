@@ -10,6 +10,7 @@ public record ProductPatchRequest(
         String name,
         UUID categoryId,
         String sku,
+        String logoUrl,
         @DecimalMin("0.0") BigDecimal price,
         @Min(0) Integer stock,
         @Min(0) Integer lowStockThreshold) {

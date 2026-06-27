@@ -31,6 +31,9 @@ public class Product extends BaseEntity {
     @Column(length = 60)
     private String sku;
 
+    @Column(name = "logo_url", length = 500)
+    private String logoUrl;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 

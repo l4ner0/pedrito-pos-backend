@@ -56,6 +56,7 @@ public class ProductService {
         if (request.name() != null && !request.name().isBlank()) product.setName(request.name());
         if (request.categoryId() != null) product.setCategoryId(request.categoryId());
         if (request.sku() != null) product.setSku(hasSku(request.sku()) ? request.sku() : null);
+        if (request.logoUrl() != null) product.setLogoUrl(request.logoUrl().isBlank() ? null : request.logoUrl());
         if (request.price() != null) product.setPrice(request.price());
         if (request.stock() != null) product.setStock(request.stock());
         if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
@@ -81,6 +82,7 @@ public class ProductService {
         product.setName(request.name());
         product.setCategoryId(request.categoryId());
         product.setSku(hasSku(request.sku()) ? request.sku() : null);
+        product.setLogoUrl(request.logoUrl());
         product.setPrice(request.price());
         if (request.stock() != null) product.setStock(request.stock());
         if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
@@ -99,6 +101,7 @@ public class ProductService {
                 product.getId(),
                 product.getName(),
                 product.getSku(),
+                product.getLogoUrl(),
                 product.getCategoryId(),
                 product.getPrice(),
                 product.getStock(),

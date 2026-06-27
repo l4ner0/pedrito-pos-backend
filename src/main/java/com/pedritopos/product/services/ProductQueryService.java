@@ -1,6 +1,5 @@
 package com.pedritopos.product.services;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +22,7 @@ public class ProductQueryService {
                         p.getId(),
                         p.getName(),
                         p.getSku(),
+                        p.getLogoUrl(),
                         p.getCategoryId(),
                         p.getPrice(),
                         p.getStock(),
