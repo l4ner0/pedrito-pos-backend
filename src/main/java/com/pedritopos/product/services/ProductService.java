@@ -35,7 +35,7 @@ public class ProductService {
     }
 
     public PagedResponse<ProductResponse> findAll(UUID businessId, String name, String categoryName, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page - 1, size);
         return PagedResponse.from(
                 productRepository.search(businessId, blankToNull(name), blankToNull(categoryName), pageable)
                         .map(this::toResponse));

@@ -47,7 +47,7 @@ public class ProductController {
     public ResponseEntity<PagedResponse<ProductResponse>> findAll(Authentication authentication,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String categoryName,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(productService.findAll(getBusinessId(authentication), name, categoryName, page, size));
     }
