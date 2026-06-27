@@ -1,6 +1,8 @@
 package com.pedritopos.sale.controllers;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -44,12 +46,14 @@ public class SaleController {
             @RequestParam(required = false) String ticketCode,
             @RequestParam(required = false) String paymentMethod,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Instant from,
-            @RequestParam(required = false) Instant to,
+            @RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
+        Instant fromInstant = from != null ? from.atStartOfDay(ZoneOffset.UTC).toInstant() : null;
+        Instant toInstant = to != null ? to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : null;
         return ResponseEntity.ok(
-                saleService.findAll(getBusinessId(authentication), ticketCode, paymentMethod, status, from, to, page, size));
+                saleService.findAll(getBusinessId(authentication), ticketCode, paymentMethod, status, fromInstant, toInstant, page, size));
     }
 
     @GetMapping("/{id}")
