@@ -66,8 +66,8 @@ com.pedritopos
         └── response/  ← outbound records
 ```
 
-Implemented modules: `auth` (login, register, refresh, logout), `category` (CRUD), `product` (CRUD + search).  
-Pending: `sales`, `analytics`, `settings`.
+Implemented modules: `auth` (login, register, refresh, logout), `category` (CRUD), `product` (CRUD + search), `sale` (create + read).  
+Pending: `analytics`, `settings`.
 
 The `businesses` and `business_settings` tables exist in the DB schema (V1 migration) but have no API module. The `POST /v1/auth/register` endpoint requires an existing `businessId` UUID — businesses must be created directly in the DB for now.
 
@@ -114,6 +114,7 @@ jwt:
 | `RuntimeException` | 400 Bad Request |
 | `MethodArgumentNotValidException` | 422 Unprocessable Entity |
 | `ObjectOptimisticLockingFailureException` | 409 Conflict |
+| `DataIntegrityViolationException` | 500 Internal Server Error |
 | `Exception` (catch-all) | 500 Internal Server Error |
 
 Throw `RuntimeException` with a Spanish message for business rule violations. The response body is `ApiError { status, message, timestamp }`.
@@ -168,7 +169,17 @@ Declare specific path segments before path variables in the same controller to a
 
 - Category `name` is always stored lowercase (`request.name().toLowerCase()` on create and update).
 - Roles: `ADMIN`, `CAJERO`
-- Payment methods: `Efectivo`, `Tarjeta`, `Yape`
-- Products: `version` column maps to `@Version` (optimistic locking), `low_stock_threshold` default 8, partial index `WHERE active = true`. The response DTO includes a computed `lowStock` boolean (`stock < lowStockThreshold`).
-- `sale_items` stores a snapshot of `product_name` and `unit_price` at the time of sale (denormalised intentionally).
+- Payment methods: `EFECTIVO`, `YAPE` (stored uppercase; DB CHECK constraint updated in V7 migration).
+- Products: `version` column maps to `@Version` (optimistic locking), `low_stock_threshold` default 8, partial index `WHERE active = true`. The response DTO includes a computed `lowStock` boolean (`stock < lowStockThreshold`). Field `logo_url` (nullable, added V5).
+- `sale_items` stores a snapshot of `product_name` and `unit_price` at the time of sale (denormalised intentionally). `SaleItem` does **not** extend `BaseEntity` because `sale_items` has no `created_at` column — it declares its own `@Id @GeneratedValue`.
+- Sales are immutable once created — no update or delete endpoints. `ticket_code` is generated from the PostgreSQL sequence `sale_ticket_seq` (created V6), formatted as `#%04d` (e.g. `#0001`).
+- Creating a sale decrements product stock inside the same `@Transactional` boundary; optimistic locking on `Product.version` protects against concurrent updates.
 - All timestamps are `TIMESTAMPTZ` stored as `Instant` in Java.
+
+### Sale module endpoints
+
+`POST /v1/sale` — create a sale. Both `ADMIN` and `CAJERO` can create. `userId` is taken from the JWT principal (not the request body). For `EFECTIVO`, `amountReceived` is required and must be `>= total`; `changeGiven` is computed server-side. For `YAPE`, `amountReceived` and `changeGiven` are `null`.
+
+`GET /v1/sale` — paginated list. Optional filters: `paymentMethod`, `from` (Instant ISO-8601), `to` (Instant ISO-8601).
+
+`GET /v1/sale/{id}` — sale detail with items.

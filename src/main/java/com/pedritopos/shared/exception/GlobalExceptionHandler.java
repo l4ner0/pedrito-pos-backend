@@ -1,5 +1,6 @@
 package com.pedritopos.shared.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -25,6 +26,12 @@ public class GlobalExceptionHandler {
                 .orElse("Error de validación");
 
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(422, message));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiError.of(500, "Error interno del servidor"));
     }
 
     @ExceptionHandler(Exception.class)
