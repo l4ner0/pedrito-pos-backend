@@ -144,7 +144,7 @@ The controller injects both services independently.
 
 ### Pagination
 
-List endpoints that can return many rows use `PagedResponse<T>` from `shared/dto/`. Build it in the service with `PagedResponse.from(page.map(this::toResponse))`. Accept `page` (default 0) and `size` (default 20) as `@RequestParam` in the controller and pass a `PageRequest.of(page, size)` `Pageable` to the repository.
+List endpoints that can return many rows use `PagedResponse<T>` from `shared/dto/`. Build it in the service with `PagedResponse.from(page.map(this::toResponse))`. Accept `page` (default **1**) and `size` (default 20) as `@RequestParam` in the controller. The service converts to Spring's 0-based index with `PageRequest.of(page - 1, size)`. `PagedResponse.from()` adds 1 back to `pageResult.getNumber()` so the response also reflects 1-based page numbers.
 
 ### Response mapping
 
