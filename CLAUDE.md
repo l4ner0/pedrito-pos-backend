@@ -140,6 +140,15 @@ The controller injects both services independently.
 - **JPQL** for queries that can use entity field names and JPA-managed types (UUID comparisons, exact matches).
 - **Native query** (`nativeQuery = true`) only when using PostgreSQL-specific features unavailable in JPQL, such as `ILIKE` for case-insensitive fuzzy search.
 - Optional filter params in native queries use `(:param IS NULL OR col ILIKE '%' || :param || '%')` so a `null` param skips the condition entirely — pass `null` (not empty string) from the service to activate this.
+- Native paginated queries **must** include a separate `countQuery` attribute alongside `value`; without it Spring cannot compute `totalPages`/`totalElements` correctly.
+
+### Pagination
+
+List endpoints that can return many rows use `PagedResponse<T>` from `shared/dto/`. Build it in the service with `PagedResponse.from(page.map(this::toResponse))`. Accept `page` (default 0) and `size` (default 20) as `@RequestParam` in the controller and pass a `PageRequest.of(page, size)` `Pageable` to the repository.
+
+### Response mapping
+
+Services build DTOs via a private `toResponse(Entity)` method — there is no separate mapper class or layer.
 
 ### Controller route ordering
 
@@ -152,6 +161,7 @@ Declare specific path segments before path variables in the same controller to a
 
 ### Key domain facts (from V1 migration)
 
+- Category `name` is always stored lowercase (`request.name().toLowerCase()` on create and update).
 - Roles: `ADMIN`, `CAJERO`
 - Payment methods: `Efectivo`, `Tarjeta`, `Yape`
 - Products: `version` column maps to `@Version` (optimistic locking), `low_stock_threshold` default 8, partial index `WHERE active = true`. The response DTO includes a computed `lowStock` boolean (`stock < lowStockThreshold`).
