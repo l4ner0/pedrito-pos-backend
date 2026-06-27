@@ -100,10 +100,10 @@ public class SaleService {
         return toResponse(sale, saleItems);
     }
 
-    public PagedResponse<SaleResponse> findAll(UUID businessId, String paymentMethod, String status,
-            Instant from, Instant to, int page, int size) {
+    public PagedResponse<SaleResponse> findAll(UUID businessId, String search, Instant from, Instant to,
+            int page, int size) {
         return PagedResponse.from(
-                saleRepository.findByBusiness(businessId, paymentMethod, status, from, to, PageRequest.of(page - 1, size))
+                saleRepository.findByBusiness(businessId, blankToNull(search), from, to, PageRequest.of(page - 1, size))
                         .map(sale -> toResponse(sale, saleItemRepository.findBySaleId(sale.getId()))));
     }
 
@@ -135,6 +135,10 @@ public class SaleService {
         saleRepository.save(sale);
 
         return toResponse(sale, saleItemRepository.findBySaleId(sale.getId()));
+    }
+
+    private String blankToNull(String value) {
+        return (value != null && !value.isBlank()) ? value.trim() : null;
     }
 
     private SaleResponse toResponse(Sale sale, List<SaleItem> items) {

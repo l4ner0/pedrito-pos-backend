@@ -22,8 +22,9 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
     @Query(value = """
             SELECT * FROM sales
             WHERE business_id = :businessId
-              AND (:paymentMethod IS NULL OR payment_method = :paymentMethod)
-              AND (:status IS NULL OR status = :status)
+              AND (:search IS NULL OR ticket_code ILIKE '%' || :search || '%'
+                                   OR payment_method ILIKE '%' || :search || '%'
+                                   OR status ILIKE '%' || :search || '%')
               AND (CAST(:from AS TIMESTAMPTZ) IS NULL OR created_at >= CAST(:from AS TIMESTAMPTZ))
               AND (CAST(:to AS TIMESTAMPTZ) IS NULL OR created_at <= CAST(:to AS TIMESTAMPTZ))
             ORDER BY created_at DESC
@@ -31,16 +32,16 @@ public interface SaleRepository extends JpaRepository<Sale, UUID> {
             countQuery = """
             SELECT COUNT(*) FROM sales
             WHERE business_id = :businessId
-              AND (:paymentMethod IS NULL OR payment_method = :paymentMethod)
-              AND (:status IS NULL OR status = :status)
+              AND (:search IS NULL OR ticket_code ILIKE '%' || :search || '%'
+                                   OR payment_method ILIKE '%' || :search || '%'
+                                   OR status ILIKE '%' || :search || '%')
               AND (CAST(:from AS TIMESTAMPTZ) IS NULL OR created_at >= CAST(:from AS TIMESTAMPTZ))
               AND (CAST(:to AS TIMESTAMPTZ) IS NULL OR created_at <= CAST(:to AS TIMESTAMPTZ))
             """,
             nativeQuery = true)
     Page<Sale> findByBusiness(
             @Param("businessId") UUID businessId,
-            @Param("paymentMethod") String paymentMethod,
-            @Param("status") String status,
+            @Param("search") String search,
             @Param("from") Instant from,
             @Param("to") Instant to,
             Pageable pageable);
