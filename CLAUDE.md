@@ -69,6 +69,10 @@ com.pedritopos
 Implemented modules: `auth` (login, register, refresh, logout), `category` (CRUD), `product` (CRUD + search).  
 Pending: `sales`, `analytics`, `settings`.
 
+The `businesses` and `business_settings` tables exist in the DB schema (V1 migration) but have no API module. The `POST /v1/auth/register` endpoint requires an existing `businessId` UUID — businesses must be created directly in the DB for now.
+
+Route naming is inconsistent across existing modules: `/v1/categories` (plural) vs `/v1/product` (singular). New modules should pick one convention deliberately.
+
 ### Multi-tenancy
 
 Every entity and every query must be scoped by `business_id`. The JWT payload carries `userId`, `businessId`, and `role`. In controllers, extract `businessId` from the `Authentication` details:
@@ -109,6 +113,7 @@ jwt:
 |---|---|
 | `RuntimeException` | 400 Bad Request |
 | `MethodArgumentNotValidException` | 422 Unprocessable Entity |
+| `ObjectOptimisticLockingFailureException` | 409 Conflict |
 | `Exception` (catch-all) | 500 Internal Server Error |
 
 Throw `RuntimeException` with a Spanish message for business rule violations. The response body is `ApiError { status, message, timestamp }`.
