@@ -21,7 +21,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
               AND p.active = true
               AND (:name IS NULL OR p.name ILIKE '%' || :name || '%')
               AND (:categoryName IS NULL OR c.name ILIKE '%' || :categoryName || '%')
-            ORDER BY p.name
+            ORDER BY p.created_at DESC
             """,
             countQuery = """
             SELECT COUNT(p.id) FROM products p
@@ -44,13 +44,13 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
               AND p.active = true
               AND (:name IS NULL OR p.name ILIKE '%' || :name || '%')
               AND (:categoryName IS NULL OR c.name ILIKE '%' || :categoryName || '%')
-            ORDER BY p.name
+            ORDER BY p.created_at DESC
             """, nativeQuery = true)
     List<Product> searchAll(@Param("businessId") UUID businessId,
             @Param("name") String name,
             @Param("categoryName") String categoryName);
 
-    @Query("SELECT p FROM Product p WHERE p.businessId = :businessId AND p.categoryId = :categoryId AND p.active = true ORDER BY p.name")
+    @Query("SELECT p FROM Product p WHERE p.businessId = :businessId AND p.categoryId = :categoryId AND p.active = true ORDER BY p.createdAt DESC")
     List<Product> findActiveByCategory(@Param("businessId") UUID businessId, @Param("categoryId") UUID categoryId);
 
     Optional<Product> findByIdAndBusinessId(UUID id, UUID businessId);
