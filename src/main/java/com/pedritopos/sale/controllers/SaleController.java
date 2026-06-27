@@ -41,13 +41,15 @@ public class SaleController {
 
     @GetMapping
     public ResponseEntity<PagedResponse<SaleResponse>> findAll(Authentication authentication,
-            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String ticketCode,
+            @RequestParam(required = false) String paymentMethod,
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(
-                saleService.findAll(getBusinessId(authentication), search, from, to, page, size));
+                saleService.findAll(getBusinessId(authentication), ticketCode, paymentMethod, status, from, to, page, size));
     }
 
     @GetMapping("/{id}")

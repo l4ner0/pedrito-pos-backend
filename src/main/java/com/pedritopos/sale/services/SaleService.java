@@ -100,10 +100,11 @@ public class SaleService {
         return toResponse(sale, saleItems);
     }
 
-    public PagedResponse<SaleResponse> findAll(UUID businessId, String search, Instant from, Instant to,
-            int page, int size) {
+    public PagedResponse<SaleResponse> findAll(UUID businessId, String ticketCode, String paymentMethod,
+            String status, Instant from, Instant to, int page, int size) {
         return PagedResponse.from(
-                saleRepository.findByBusiness(businessId, blankToNull(search), from, to, PageRequest.of(page - 1, size))
+                saleRepository.findByBusiness(businessId, blankToNull(ticketCode), paymentMethod, status, from, to,
+                        PageRequest.of(page - 1, size))
                         .map(sale -> toResponse(sale, saleItemRepository.findBySaleId(sale.getId()))));
     }
 
