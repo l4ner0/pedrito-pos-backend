@@ -9,7 +9,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,11 +46,6 @@ public class BusinessController {
     public ResponseEntity<BusinessResponse> patch(Authentication authentication,
             @RequestBody BusinessPatchRequest request) {
         return ResponseEntity.ok(businessService.patch(getBusinessId(authentication), request));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<BusinessResponse> findById(@PathVariable UUID id) {
-        return ResponseEntity.ok(businessService.findById(id));
     }
 
     @GetMapping("/settings")

@@ -66,10 +66,10 @@ com.pedritopos
         └── response/  ← outbound records
 ```
 
-Implemented modules: `auth` (login, register, refresh, logout), `business` (read + update business data and settings), `category` (CRUD), `product` (CRUD + search), `sale` (create, read, cancel, top-products).  
+Implemented modules: `auth` (login, register, refresh, logout), `business` (create + read + update business data and settings), `category` (CRUD), `product` (CRUD + search), `sale` (create, read, cancel, top-products).  
 Pending: `analytics`.
 
-The `POST /v1/auth/register` endpoint requires an existing `businessId` UUID — businesses must be created directly in the DB for now (no create/delete endpoints in the API).
+The `POST /v1/auth/register` endpoint requires an existing `businessId` UUID. Use `POST /v1/business` first to create the business, then use the returned `id` to register the first user.
 
 Route naming is inconsistent across existing modules: `/v1/categories` (plural) vs `/v1/product` (singular). New modules should pick one convention deliberately.
 
@@ -88,7 +88,7 @@ private UUID getBusinessId(Authentication authentication) {
 
 ### Security
 
-`SecurityConfig` configures stateless JWT auth. Public endpoints: `POST /v1/auth/login`, `POST /v1/auth/register`, `POST /v1/auth/refresh`, `POST /v1/auth/logout`. All other routes require a valid Bearer token.
+`SecurityConfig` configures stateless JWT auth. Public endpoints: `POST /v1/auth/login`, `POST /v1/auth/register`, `POST /v1/auth/refresh`, `POST /v1/auth/logout`, `POST /v1/business`. All other routes require a valid Bearer token.
 
 `JwtAuthFilter` sets authorities in the format `ROLE_{role}` (e.g. `ROLE_ADMIN`, `ROLE_CAJERO`). Use `@PreAuthorize("hasRole('ADMIN')")` on controller methods that need role enforcement.
 
@@ -167,8 +167,21 @@ Declare specific path segments before path variables in the same controller to a
 @GetMapping("/{id}")
 ```
 
+### Business module endpoints
+
+`POST /v1/business` — public endpoint (no JWT). Creates a business and inserts a `business_settings` row in the same transaction with `printEnabled = false` and all other settings fields null. Returns `201 Created` with the new business. Onboarding flow: call this first, then `POST /v1/auth/register` with the returned `id`.
+
+`GET /v1/business` — returns the business of the authenticated user (scoped by JWT `businessId`).
+
+`PATCH /v1/business` — partial update of business data (`ADMIN` only). Sending `""` for `ruc`, `address`, or `phone` clears the field to `null`; sending `null` leaves it unchanged.
+
+`GET /v1/business/settings` — returns settings for the authenticated user's business.
+
+`PATCH /v1/business/settings` — partial update of settings (`ADMIN` only).
+
 ### Key domain facts (from V1 migration)
 
+- `businesses` table columns: `id`, `name` (VARCHAR 150, NOT NULL), `ruc` (VARCHAR 20), `address` (VARCHAR 255), `phone` (VARCHAR 20, added V9), `created_at`.
 - Category `name` is always stored lowercase (`request.name().toLowerCase()` on create and update).
 - Roles: `ADMIN`, `CAJERO`
 - Payment methods: `EFECTIVO`, `YAPE` (stored uppercase; DB CHECK constraint updated in V7 migration).
