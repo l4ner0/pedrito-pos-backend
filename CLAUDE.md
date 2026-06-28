@@ -177,11 +177,12 @@ Declare specific path segments before path variables in the same controller to a
 
 `GET /v1/business/settings` — returns settings for the authenticated user's business.
 
-`PATCH /v1/business/settings` — partial update of settings (`ADMIN` only).
+`PATCH /v1/business/settings` — partial update of settings (`ADMIN` only). Fields: `yapeNumber`, `yapeQrUrl`, `yapeAccountHolder`, `printEnabled`, `ticketFooter`. Sending `""` for string fields clears them to `null`; sending `null` leaves them unchanged.
 
 ### Key domain facts (from V1 migration)
 
 - `businesses` table columns: `id`, `name` (VARCHAR 150, NOT NULL), `ruc` (VARCHAR 20), `address` (VARCHAR 255), `phone` (VARCHAR 20, added V9), `created_at`.
+- `business_settings` table columns: `id`, `business_id` (UNIQUE FK), `yape_number` (VARCHAR 15), `yape_qr_url` (VARCHAR 500), `yape_account_holder` (VARCHAR 150, added V10), `print_enabled` (BOOLEAN NOT NULL), `ticket_footer` (VARCHAR 255). All string fields are nullable; `print_enabled` defaults to `false` when created via API.
 - Category `name` is always stored lowercase (`request.name().toLowerCase()` on create and update).
 - Roles: `ADMIN`, `CAJERO`
 - Payment methods: `EFECTIVO`, `YAPE` (stored uppercase; DB CHECK constraint updated in V7 migration).

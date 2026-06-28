@@ -7,6 +7,7 @@ public record BusinessSettingsResponse(
         UUID businessId,
         String yapeNumber,
         String yapeQrUrl,
+        String yapeAccountHolder,
         boolean printEnabled,
         String ticketFooter) {
 }

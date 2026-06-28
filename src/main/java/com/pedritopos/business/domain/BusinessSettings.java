@@ -32,6 +32,9 @@ public class BusinessSettings {
     @Column(name = "yape_qr_url", length = 500)
     private String yapeQrUrl;
 
+    @Column(name = "yape_account_holder", length = 150)
+    private String yapeAccountHolder;
+
     @Column(name = "print_enabled", nullable = false)
     private boolean printEnabled = true;
 

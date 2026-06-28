@@ -71,7 +71,7 @@ public class BusinessService {
     public BusinessSettingsResponse findSettings(UUID businessId) {
         return businessSettingsRepository.findByBusinessId(businessId)
                 .map(this::toSettingsResponse)
-                .orElse(new BusinessSettingsResponse(null, businessId, null, null, true, null));
+                .orElse(new BusinessSettingsResponse(null, businessId, null, null, null, false, null));
     }
 
     @Transactional
@@ -88,6 +88,9 @@ public class BusinessService {
         }
         if (request.yapeQrUrl() != null) {
             settings.setYapeQrUrl(request.yapeQrUrl().isBlank() ? null : request.yapeQrUrl().trim());
+        }
+        if (request.yapeAccountHolder() != null) {
+            settings.setYapeAccountHolder(request.yapeAccountHolder().isBlank() ? null : request.yapeAccountHolder().trim());
         }
         if (request.printEnabled() != null) {
             settings.setPrintEnabled(request.printEnabled());
@@ -115,6 +118,7 @@ public class BusinessService {
                 settings.getBusinessId(),
                 settings.getYapeNumber(),
                 settings.getYapeQrUrl(),
+                settings.getYapeAccountHolder(),
                 settings.isPrintEnabled(),
                 settings.getTicketFooter());
     }
