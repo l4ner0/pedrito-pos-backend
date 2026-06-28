@@ -18,6 +18,7 @@ import com.pedritopos.sale.dto.request.SaleItemRequest;
 import com.pedritopos.sale.dto.request.SaleRequest;
 import com.pedritopos.sale.dto.response.SaleItemResponse;
 import com.pedritopos.sale.dto.response.SaleResponse;
+import com.pedritopos.sale.dto.response.TopProductResponse;
 import com.pedritopos.sale.repositories.SaleItemRepository;
 import com.pedritopos.sale.repositories.SaleRepository;
 import com.pedritopos.shared.dto.PagedResponse;
@@ -136,6 +137,24 @@ public class SaleService {
         saleRepository.save(sale);
 
         return toResponse(sale, saleItemRepository.findBySaleId(sale.getId()));
+    }
+
+    public PagedResponse<TopProductResponse> findTopProducts(UUID businessId, int page, int size) {
+        return PagedResponse.from(
+                saleItemRepository.findTopProducts(businessId, PageRequest.of(page - 1, size))
+                        .map(p -> new TopProductResponse(
+                                p.getId(),
+                                p.getName(),
+                                p.getSku(),
+                                p.getLogoUrl(),
+                                p.getCategoryId(),
+                                p.getPrice(),
+                                p.getStock(),
+                                p.getLowStockThreshold(),
+                                p.getActive(),
+                                p.getStock() < p.getLowStockThreshold(),
+                                p.getCreatedAt(),
+                                p.getTotalSold())));
     }
 
     private String blankToNull(String value) {

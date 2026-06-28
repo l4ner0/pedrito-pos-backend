@@ -1,7 +1,7 @@
 package com.pedritopos.sale.controllers;
 
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pedritopos.sale.dto.request.SaleRequest;
 import com.pedritopos.sale.dto.response.SaleResponse;
+import com.pedritopos.sale.dto.response.TopProductResponse;
 import com.pedritopos.sale.services.SaleService;
 import com.pedritopos.shared.dto.PagedResponse;
 
@@ -46,14 +47,21 @@ public class SaleController {
             @RequestParam(required = false) String ticketCode,
             @RequestParam(required = false) String paymentMethod,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) LocalDate from,
-            @RequestParam(required = false) LocalDate to,
+            @RequestParam(required = false) LocalDateTime from,
+            @RequestParam(required = false) LocalDateTime to,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Instant fromInstant = from != null ? from.atStartOfDay(ZoneOffset.UTC).toInstant() : null;
-        Instant toInstant = to != null ? to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant() : null;
+        Instant fromInstant = from != null ? from.toInstant(ZoneOffset.UTC) : null;
+        Instant toInstant = to != null ? to.toInstant(ZoneOffset.UTC) : null;
         return ResponseEntity.ok(
                 saleService.findAll(getBusinessId(authentication), ticketCode, paymentMethod, status, fromInstant, toInstant, page, size));
+    }
+
+    @GetMapping("/top-products")
+    public ResponseEntity<PagedResponse<TopProductResponse>> findTopProducts(Authentication authentication,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(saleService.findTopProducts(getBusinessId(authentication), page, size));
     }
 
     @GetMapping("/{id}")
