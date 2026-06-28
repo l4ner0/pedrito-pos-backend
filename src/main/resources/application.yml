@@ -19,10 +19,23 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
 jwt:
   secret: "OP=cF$6n^8c6£GN0(06<6Uiv0DLg]EQ~"
   expiration-ms: 900000  # 15 min
   refresh-expiration-ms: 86400000  # 24 horas
+
+cloudflare:
+  r2:
+    account-id: ${CF_R2_ACCOUNT_ID}
+    access-key: ${CF_R2_ACCESS_KEY}
+    secret-key: ${CF_R2_SECRET_KEY}
+    bucket: ${CF_R2_BUCKET}
+    public-url: ${CF_R2_PUBLIC_URL}
 
 server:
   port: 8080

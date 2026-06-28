@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.pedritopos.business.domain.Business;
 import com.pedritopos.business.domain.BusinessSettings;
@@ -14,6 +15,7 @@ import com.pedritopos.business.dto.response.BusinessResponse;
 import com.pedritopos.business.dto.response.BusinessSettingsResponse;
 import com.pedritopos.business.repositories.BusinessRepository;
 import com.pedritopos.business.repositories.BusinessSettingsRepository;
+import com.pedritopos.shared.storage.StorageService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +25,7 @@ public class BusinessService {
 
     private final BusinessRepository businessRepository;
     private final BusinessSettingsRepository businessSettingsRepository;
+    private final StorageService storageService;
 
     @Transactional
     public BusinessResponse create(BusinessRequest request) {
@@ -75,7 +78,7 @@ public class BusinessService {
     }
 
     @Transactional
-    public BusinessSettingsResponse patchSettings(UUID businessId, BusinessSettingsPatchRequest request) {
+    public BusinessSettingsResponse patchSettings(UUID businessId, BusinessSettingsPatchRequest request, MultipartFile file) {
         BusinessSettings settings = businessSettingsRepository.findByBusinessId(businessId)
                 .orElseGet(() -> {
                     BusinessSettings s = new BusinessSettings();
@@ -86,7 +89,13 @@ public class BusinessService {
         if (request.yapeNumber() != null) {
             settings.setYapeNumber(request.yapeNumber().isBlank() ? null : request.yapeNumber().trim());
         }
-        if (request.yapeQrUrl() != null) {
+        if (file != null && !file.isEmpty()) {
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new RuntimeException("Solo se permiten imágenes");
+            }
+            settings.setYapeQrUrl(storageService.upload(file, "yape-qr"));
+        } else if (request.yapeQrUrl() != null) {
             settings.setYapeQrUrl(request.yapeQrUrl().isBlank() ? null : request.yapeQrUrl().trim());
         }
         if (request.yapeAccountHolder() != null) {

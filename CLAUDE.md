@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Spring Boot 3.5.15 backend for **Pedrito POS** — a multi-tenant point-of-sale system. Java 21, Maven, PostgreSQL 16, Spring Data JPA, Flyway, Spring Security, JWT (jjwt 0.12.6), Lombok.
+Spring Boot 3.5.15 backend for **Pedrito POS** — a multi-tenant point-of-sale system. Java 21, Maven, PostgreSQL 16, Spring Data JPA, Flyway, Spring Security, JWT (jjwt 0.12.6), Lombok, Cloudflare R2 (AWS SDK S3 v2).
 
 ## Commands
 
@@ -35,7 +35,7 @@ PostgreSQL via Docker Compose (`localhost:5432`, db/user/password: `pedritopos` 
 
 Schema is managed exclusively by **Flyway** (`ddl-auto: validate`). Migration files live in `src/main/resources/db/migration/` following the `V{n}__{description}.sql` naming convention. Never change `ddl-auto` to `create` or `update`.
 
-The VS Code launch config reads from a `.env` file at the project root for local overrides.
+The project uses `spring-dotenv` (`me.paulschwarz:spring-dotenv:4.0.0`) to load the `.env` file at the project root automatically on every startup, regardless of how the app is launched (terminal or VS Code). Add secrets here — never commit this file.
 
 **Flyway checksum mismatch in development** — if a migration file is modified after being applied, fix it by removing the record and re-running:
 
@@ -53,9 +53,12 @@ com.pedritopos
 ├── PedritoPosApplication.java        ← entry point
 ├── shared/
 │   ├── config/SecurityConfig.java    ← Spring Security + JWT filter wiring
+│   ├── config/R2Config.java          ← S3Client bean for Cloudflare R2
+│   ├── config/R2Properties.java      ← @ConfigurationProperties(prefix = "cloudflare.r2")
 │   ├── domain/BaseEntity.java        ← UUID PK + createdAt (@MappedSuperclass)
 │   ├── exception/                    ← GlobalExceptionHandler, ApiError
-│   └── security/                     ← JwtService, JwtAuthFilter
+│   ├── security/                     ← JwtService, JwtAuthFilter
+│   └── storage/StorageService.java   ← uploads MultipartFile to R2, returns public URL
 └── {module}/
     ├── controllers/   ← @RestController, mapped to /v1/{module}/
     ├── services/      ← @Service, business logic
@@ -177,7 +180,7 @@ Declare specific path segments before path variables in the same controller to a
 
 `GET /v1/business/settings` — returns settings for the authenticated user's business.
 
-`PATCH /v1/business/settings` — partial update of settings (`ADMIN` only). Fields: `yapeNumber`, `yapeQrUrl`, `yapeAccountHolder`, `printEnabled`, `ticketFooter`. Sending `""` for string fields clears them to `null`; sending `null` leaves them unchanged.
+`PATCH /v1/business/settings` — partial update of settings (`ADMIN` only). Consumes `multipart/form-data`. Text fields: `yapeNumber`, `yapeQrUrl`, `yapeAccountHolder`, `printEnabled`, `ticketFooter` — all `@RequestParam(required = false)`. Optional file field: `file` (image only); when present it is uploaded to Cloudflare R2 and the resulting URL overwrites `yapeQrUrl`, ignoring the `yapeQrUrl` text param. Sending `""` for any string field clears it to `null`; sending `null` leaves it unchanged.
 
 ### Key domain facts (from V1 migration)
 
