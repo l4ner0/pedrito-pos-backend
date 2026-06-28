@@ -66,10 +66,10 @@ com.pedritopos
         └── response/  ← outbound records
 ```
 
-Implemented modules: `auth` (login, register, refresh, logout), `category` (CRUD), `product` (CRUD + search), `sale` (create + read).  
-Pending: `analytics`, `settings`.
+Implemented modules: `auth` (login, register, refresh, logout), `business` (read + update business data and settings), `category` (CRUD), `product` (CRUD + search), `sale` (create, read, cancel, top-products).  
+Pending: `analytics`.
 
-The `businesses` and `business_settings` tables exist in the DB schema (V1 migration) but have no API module. The `POST /v1/auth/register` endpoint requires an existing `businessId` UUID — businesses must be created directly in the DB for now.
+The `POST /v1/auth/register` endpoint requires an existing `businessId` UUID — businesses must be created directly in the DB for now (no create/delete endpoints in the API).
 
 Route naming is inconsistent across existing modules: `/v1/categories` (plural) vs `/v1/product` (singular). New modules should pick one convention deliberately.
 
@@ -91,6 +91,8 @@ private UUID getBusinessId(Authentication authentication) {
 `SecurityConfig` configures stateless JWT auth. Public endpoints: `POST /v1/auth/login`, `POST /v1/auth/register`, `POST /v1/auth/refresh`, `POST /v1/auth/logout`. All other routes require a valid Bearer token.
 
 `JwtAuthFilter` sets authorities in the format `ROLE_{role}` (e.g. `ROLE_ADMIN`, `ROLE_CAJERO`). Use `@PreAuthorize("hasRole('ADMIN')")` on controller methods that need role enforcement.
+
+CORS is configured in `SecurityConfig` to allow `http://localhost:3000` with credentials.
 
 ### JWT configuration
 
@@ -172,7 +174,7 @@ Declare specific path segments before path variables in the same controller to a
 - Payment methods: `EFECTIVO`, `YAPE` (stored uppercase; DB CHECK constraint updated in V7 migration).
 - Products: `version` column maps to `@Version` (optimistic locking), `low_stock_threshold` default 8, partial index `WHERE active = true`. The response DTO includes a computed `lowStock` boolean (`stock < lowStockThreshold`). Field `logo_url` (nullable, added V5).
 - `sale_items` stores a snapshot of `product_name` and `unit_price` at the time of sale (denormalised intentionally). `SaleItem` does **not** extend `BaseEntity` because `sale_items` has no `created_at` column — it declares its own `@Id @GeneratedValue`.
-- Sales are immutable once created — no update or delete endpoints. `ticket_code` is generated from the PostgreSQL sequence `sale_ticket_seq` (created V6), formatted as `#%04d` (e.g. `#0001`).
+- Sales are immutable once created except for cancellation. `status` is `ACTIVE` (default) or `CANCELLED` (V8 migration); cancellation restores product stock and requires `ADMIN` role. `ticket_code` is generated from the PostgreSQL sequence `sale_ticket_seq` (created V6), formatted as `#%04d` (e.g. `#0001`).
 - Creating a sale decrements product stock inside the same `@Transactional` boundary; optimistic locking on `Product.version` protects against concurrent updates.
 - All timestamps are `TIMESTAMPTZ` stored as `Instant` in Java.
 
@@ -180,6 +182,10 @@ Declare specific path segments before path variables in the same controller to a
 
 `POST /v1/sale` — create a sale. Both `ADMIN` and `CAJERO` can create. `userId` is taken from the JWT principal (not the request body). For `EFECTIVO`, `amountReceived` is required and must be `>= total`; `changeGiven` is computed server-side. For `YAPE`, `amountReceived` and `changeGiven` are `null`.
 
-`GET /v1/sale` — paginated list. Optional filters: `paymentMethod`, `from` (Instant ISO-8601), `to` (Instant ISO-8601).
+`GET /v1/sale` — paginated list. Optional filters: `ticketCode` (fuzzy), `paymentMethod`, `status`, `from` and `to` as `LocalDateTime` ISO-8601 without timezone (e.g. `2026-06-28T04:59:59.999`). The controller converts to `Instant` via `ZoneOffset.UTC`.
 
 `GET /v1/sale/{id}` — sale detail with items.
+
+`PATCH /v1/sale/{id}/cancel` — cancel a sale (`ADMIN` only). Restores product stock for all active items.
+
+`GET /v1/sale/top-products` — paginated product list ordered by `total_sold DESC`, then `created_at DESC`. All active products are included (zero-sold appear at end). Returns all product fields plus `totalSold` (computed `lowStock` boolean included). This route is declared before `/{id}` in the controller to avoid routing conflicts.
