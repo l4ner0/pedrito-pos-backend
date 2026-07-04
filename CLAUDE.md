@@ -35,7 +35,15 @@ PostgreSQL via Docker Compose (`localhost:5432`, db/user/password: `pedritopos` 
 
 Schema is managed exclusively by **Flyway** (`ddl-auto: validate`). Migration files live in `src/main/resources/db/migration/` following the `V{n}__{description}.sql` naming convention. Never change `ddl-auto` to `create` or `update`.
 
-The project uses `spring-dotenv` (`me.paulschwarz:spring-dotenv:4.0.0`) to load the `.env` file at the project root automatically on every startup, regardless of how the app is launched (terminal or VS Code). Add secrets here — never commit this file.
+The project uses `spring-dotenv` (`me.paulschwarz:spring-dotenv:4.0.0`) to load the `.env` file at the project root automatically on every startup, regardless of how the app is launched (terminal or VS Code). Add secrets here — never commit this file. Required variables:
+
+```
+CF_R2_ACCOUNT_ID=
+CF_R2_ACCESS_KEY=
+CF_R2_SECRET_KEY=
+CF_R2_BUCKET=
+CF_R2_PUBLIC_URL=
+```
 
 **Flyway checksum mismatch in development** — if a migration file is modified after being applied, fix it by removing the record and re-running:
 
@@ -186,14 +194,17 @@ Declare specific path segments before path variables in the same controller to a
 
 - `businesses` table columns: `id`, `name` (VARCHAR 150, NOT NULL), `ruc` (VARCHAR 20), `address` (VARCHAR 255), `phone` (VARCHAR 20, added V9), `created_at`.
 - `business_settings` table columns: `id`, `business_id` (UNIQUE FK), `yape_number` (VARCHAR 15), `yape_qr_url` (VARCHAR 500), `yape_account_holder` (VARCHAR 150, added V10), `print_enabled` (BOOLEAN NOT NULL), `ticket_footer` (VARCHAR 255). All string fields are nullable; `print_enabled` defaults to `false` when created via API.
-- Category `name` is always stored lowercase (`request.name().toLowerCase()` on create and update).
+- `users` table columns: `id`, `business_id` (FK), `username` (VARCHAR 50, nullable, added V3), `email` (VARCHAR 150, UNIQUE), `password_hash`, `full_name` (VARCHAR 150), `avatar_url` (VARCHAR 500, nullable), `role` (CHECK `ADMIN`/`CAJERO`, default `CAJERO`), `active` (default true), `created_at`.
+- Category `name` is always stored lowercase (`request.name().toLowerCase()` on create and update). DB enforces `UNIQUE (business_id, name)`.
 - Roles: `ADMIN`, `CAJERO`
 - Payment methods: `EFECTIVO`, `YAPE` (stored uppercase; DB CHECK constraint updated in V7 migration).
-- Products: `version` column maps to `@Version` (optimistic locking), `low_stock_threshold` default 8, partial index `WHERE active = true`. The response DTO includes a computed `lowStock` boolean (`stock < lowStockThreshold`). Field `logo_url` (nullable, added V5).
-- `sale_items` stores a snapshot of `product_name` and `unit_price` at the time of sale (denormalised intentionally). `SaleItem` does **not** extend `BaseEntity` because `sale_items` has no `created_at` column — it declares its own `@Id @GeneratedValue`.
+- Products: `version` column maps to `@Version` (optimistic locking), `low_stock_threshold` default 8, partial index `WHERE active = true`. The response DTO includes a computed `lowStock` boolean (`stock < lowStockThreshold`). Field `logo_url` (nullable, added V5). DB enforces `UNIQUE (business_id, sku)`.
+- `sales` table columns include `subtotal`, `discount_amount` (default 0), `total`, `amount_received` (nullable), `change_given` (nullable). Index on `(business_id, created_at)`.
+- `sale_items` stores a snapshot of `product_name` and `unit_price` at the time of sale (denormalised intentionally). Also stores `quantity` and `line_total`. `SaleItem` does **not** extend `BaseEntity` because `sale_items` has no `created_at` column — it declares its own `@Id @GeneratedValue`.
 - Sales are immutable once created except for cancellation. `status` is `ACTIVE` (default) or `CANCELLED` (V8 migration); cancellation restores product stock and requires `ADMIN` role. `ticket_code` is generated from the PostgreSQL sequence `sale_ticket_seq` (created V6), formatted as `#%04d` (e.g. `#0001`).
 - Creating a sale decrements product stock inside the same `@Transactional` boundary; optimistic locking on `Product.version` protects against concurrent updates.
 - All timestamps are `TIMESTAMPTZ` stored as `Instant` in Java.
+- Multipart file uploads (e.g. Yape QR image) are capped at **5MB** (`spring.servlet.multipart.max-file-size` and `max-request-size`).
 
 ### Sale module endpoints
 
