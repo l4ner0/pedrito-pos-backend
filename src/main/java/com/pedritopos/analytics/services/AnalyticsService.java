@@ -5,16 +5,20 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.pedritopos.analytics.dto.response.StarProductResponse;
 import com.pedritopos.analytics.dto.response.SummaryResponse;
 import com.pedritopos.analytics.repositories.AnalyticsRepository;
+import com.pedritopos.analytics.repositories.ProductAnalyticsRepository;
 import com.pedritopos.analytics.repositories.SalesSummaryProjection;
 import com.pedritopos.analytics.repositories.StarProductProjection;
+import com.pedritopos.product.dto.response.ProductResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 public class AnalyticsService {
 
     private final AnalyticsRepository analyticsRepository;
+    private final ProductAnalyticsRepository productAnalyticsRepository;
 
     public SummaryResponse getSummary(UUID businessId, LocalDate date) {
         Instant from = date.atStartOfDay(ZoneOffset.UTC).toInstant();
@@ -42,5 +47,23 @@ public class AnalyticsService {
                 .orElse(null);
 
         return new SummaryResponse(totalRevenue, salesCount, averageTicket, starProductResponse);
+    }
+
+    public List<ProductResponse> getLowStock(UUID businessId, int limit) {
+        return productAnalyticsRepository.findLowStock(businessId, PageRequest.of(0, limit))
+                .stream()
+                .map(p -> new ProductResponse(
+                        p.getId(),
+                        p.getName(),
+                        p.getSku(),
+                        p.getLogoUrl(),
+                        p.getCategoryId(),
+                        p.getPrice(),
+                        p.getStock(),
+                        p.getLowStockThreshold(),
+                        p.isActive(),
+                        p.getStock() < p.getLowStockThreshold(),
+                        p.getCreatedAt()))
+                .toList();
     }
 }
